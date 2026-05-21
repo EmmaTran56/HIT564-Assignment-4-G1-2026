@@ -1,27 +1,12 @@
 """
 PRT564 - Data Analytics and Visualisation
-Assessment 2: Group Project Presentation
+Assessment 4: Group Project Report
 Group 1
-
-Script: 01_data_preprocessing.py
-Purpose: Full pipeline for Assessment 4 — data cleaning, merging,
-         EDA (RQ1), and classification (RQ3, RQ4).
 
 Research Questions:
     RQ3: Classify NT region-months into High/Medium/Low risk for violent crime.
     RQ4: Classify months into High/Medium/Low risk for seasonal resource planning.
 
-Inputs (place all files in the same folder as this script):
-    nt_crime_statistics_dec_2025.csv
-    nt-government-regions_1986-to-2025.xlsx
-    wholesale-alcohol-supply-by-quarter-2023.xlsx
-    wholesale-alcohol-supply-by-quarter-2024.xlsx
-    wholesale-alcohol-supply-by-quarter-2025.xlsx
-
-Outputs:
-    nt_crime_merged.csv
-    eda_plots/*.png
-    classification_plots/*.png
 """
 
 import os
@@ -117,8 +102,8 @@ crime["Quarter"] = crime["Month number"].apply(lambda m: (m - 1) // 3 + 1)
 #   - For Darwin, Palmerston, Alice Springs, Katherine, Nhulunbuy, Tennant Creek:
 #     map directly to their corresponding population region.
 #   - For NT Balance rows: use SA2 value to determine the correct population region.
-#     SA2 mapping is based on NT Government boundary definitions (see image ref).
-#     Rows with Unknown SA2 remain in Top End (best available assignment).
+#     SA2 mapping is based on NT Government boundary definitions
+#     Rows with Unknown SA2 remain in Top End
 
 SA2_TO_REGION = {
     # Barkly
@@ -379,7 +364,6 @@ print("Starting EDA...")
 
 # ==============================================================================
 # STEP 6: FEATURE ENGINEERING FOR CLASSIFICATION
-# Build the region-month level dataset used by both RQ3 and RQ4.
 # Unit of analysis: 1 row = 1 region × 1 month.
 # ==============================================================================
  
@@ -444,8 +428,7 @@ cls_df["pct_senior"] = (
 )
  
 # Per-capita alcohol supply features
-# Dividing by population controls for region size (Greater Darwin has high
-# absolute PAC simply because it has more people)
+# Dividing by population controls for region size 
 cls_df["alcohol_per_capita"]                  = cls_df["Total_PAC"]           / cls_df["Total_population"]
 cls_df["full_strength_beer_pac_per_capita"]   = cls_df["Full_Strength_Beer_PAC"]  / cls_df["Total_population"]
 cls_df["mid_strength_beer_pac_per_capita"]    = cls_df["Mid_Strength_Beer_PAC"]   / cls_df["Total_population"]
@@ -455,15 +438,12 @@ cls_df["bottled_wine_pac_per_capita"]         = cls_df["Bottled_Wine_PAC"]      
 cls_df["fortified_wine_pac_per_capita"]       = cls_df["Fortified_Wine_PAC"]      / cls_df["Total_population"]
  
 # Cyclic month encoding
-# Integer month 1-12 implies linear relationship (December and January appear
-# 11 months apart). Sin/cos pair encodes them as adjacent, which is correct.
+
 cls_df["sin_month"] = np.sin(2 * np.pi * cls_df["Month number"] / 12)
 cls_df["cos_month"] = np.cos(2 * np.pi * cls_df["Month number"] / 12)
  
 # Risk label: tertile thresholds from 2024 training data ONLY.
-# Fixed thresholds applied to 2025 prevents label leakage.
-# Lower and upper bounds set to -inf/+inf so that any 2025 observation
-# falling outside the 2024 range is still classified rather than dropped.
+
 train_2024    = cls_df[cls_df["Year"] == 2024]
 q_edges       = train_2024["assault_rate"].quantile([0, 0.33, 0.66, 1]).to_numpy().copy()
 q_edges[0]    = -np.inf   # ensure no observation is below the lower bound
@@ -487,17 +467,9 @@ cls_df = cls_df.sort_values(["Year", "Month number"]).reset_index(drop=True)
  
 # Feature lists
 #
-# RQ3: Classify region-months — full feature set captures BOTH regional
-#      characteristics (demographic, population size) AND temporal patterns
-#      (sin/cos month). Goal: predict risk for a specific region in a specific month.
-#
-# RQ4: Classify months for seasonal resource planning — uses only temporal
-#      and alcohol supply features. Demographic features (pct_youth, pct_aboriginal,
-#      pct_male, pct_senior, Total_population) are deliberately excluded because
-#      they are stable regional characteristics that do not vary by month.
-#      Including them would answer "which region is risky" rather than
-#      "which month of the year is risky" — which is RQ3's question, not RQ4's.
- 
+# RQ3: Classify region-months — full feature set captures BOTH regional characteristics (demographic, population size) AND 
+# temporal patterns (sin/cos month). Goal: predict risk for a specific region in a specific month.
+
 FEATURES_RQ3 = [
     "Total_population",
     "Alcohol_involvement",
@@ -1161,7 +1133,6 @@ def run_classification(cls_df, features, rq_label, n_splits=3):
     t_stat, p_val = ttest_rel(gnb_cv, rf_cv)
     decision = "Reject H0" if p_val < 0.05 else "Fail to reject H0 (not significant)"
     print(f"  t = {t_stat:.4f}, p = {p_val:.4f}  ->  {decision}")
-    print("  Note: 3 CV folds provides limited statistical power.")
  
     # ── Test set predictions ──────────────────────────────────────────────────
     y_pred_gnb = gnb_pipe.predict(X_test)
@@ -1412,28 +1383,12 @@ def run_classification(cls_df, features, rq_label, n_splits=3):
  
 # ==============================================================================
 # RQ3: CLASSIFY REGION-MONTHS INTO RISK CLASSES
-# Features: demographic + per-capita alcohol (14 features, no sin/cos)
-# Region signal is captured implicitly through demographic and alcohol features,
-# not through explicit region dummies — encourages model to learn drivers.
 # ==============================================================================
  
 rq3_results = run_classification(cls_df, FEATURES_RQ3, "RQ3")
  
 # ==============================================================================
 # RQ4: CLASSIFY MONTHS INTO RISK CLASSES (SEASONAL RESOURCE PLANNING)
-#
-# RQ4 operates at a different granularity from RQ3.
-# Instead of region-month observations (72 obs), RQ4 aggregates to
-# month level (24 obs: 12 months x 2 years) by averaging assault rate
-# and alcohol supply features across all 6 regions.
-#
-# This ensures the risk label reflects seasonal timing rather than
-# regional characteristics. A separate risk label is created from the
-# month-level assault rate so that Barkly (persistently High at region level)
-# does not dominate the seasonal classification.
-#
-# Limitation: 24 observations is a small dataset. Results should be
-# interpreted with caution and treated as indicative rather than definitive.
 # ==============================================================================
 
 print()
