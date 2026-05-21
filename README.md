@@ -2,14 +2,13 @@
 
 End-to-end pipeline for **Northern Territory crime**, **population**, and **wholesale alcohol supply (PAC)**. The main script **cleans and merges** the source files, writes an analysis-ready dataset, then runs:
 
-- **EDA** for **RQ1** (monthly crime patterns) and supporting assault analysis
+- **EDA** for monthly crime patterns and supporting assault analysis
 - **Classification** for **RQ3** (region-month risk) and **RQ4** (seasonal month-level risk)
 
 ## Research questions
 
 | RQ | Focus | Approach |
 |----|--------|----------|
-| **RQ1** | Monthly crime patterns across NT | Descriptive EDA (offences, rates, heatmaps) |
 | **RQ3** | Classify **region-months** into High / Medium / Low violent-crime risk | GaussianNB, SVM, Random Forest (train 2024 → test 2025) |
 | **RQ4** | Classify **months** for seasonal resource planning | Same models on month-aggregated data (temporal + alcohol features only) |
 
