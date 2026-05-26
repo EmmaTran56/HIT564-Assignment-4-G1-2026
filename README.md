@@ -52,7 +52,7 @@ The script runs **Steps 1–6** (load → merge → save CSV), **feature enginee
 | Output | Description |
 |--------|-------------|
 | `nt_crime_merged.csv` | Merged table: crime counts + population features + PAC + region dummies |
-| `eda_plots/*.png` | EDA figures (overview, RQ1, assault analysis) |
+| `eda_plots/*.png` | EDA figures (overview, assault analysis) |
 | `classification_plots/*.png` | Classification EDA, model comparison, SHAP, and prediction plots |
 
 ### Generated plots (`eda_plots/`)
