@@ -994,7 +994,7 @@ def run_classification(cls_df, features, rq_label, n_splits=3):
     tscv = TimeSeriesSplit(n_splits=n_splits)
  
     # ── GridSearchCV: Random Forest ───────────────────────────────────────────
-    # scoring='f1_weighted' is appropriate for imbalanced classes (16/14/28 split)
+    # scoring='f1_weighted' is appropriate for imbalanced classes
     # TimeSeriesSplit ensures tuning always trains on past and validates on future
     print(f"\n-- {rq_label} GridSearchCV: Random Forest (scoring=f1_weighted) --")
     rf_param_grid = {
